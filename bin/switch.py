@@ -27,6 +27,8 @@ from ryu.lib.mac import haddr_to_bin
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import ether_types
+from pprint import pprint
+import pdb
 
 
 class SimpleSwitch(app_manager.RyuApp):
@@ -37,6 +39,7 @@ class SimpleSwitch(app_manager.RyuApp):
         self.mac_to_port = {}
 
     def add_flow(self, datapath, in_port, dst, src, actions):
+        #pdb.set_trace()
         ofproto = datapath.ofproto
 
         match = datapath.ofproto_parser.OFPMatch(
@@ -71,18 +74,29 @@ class SimpleSwitch(app_manager.RyuApp):
         self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
 
         # learn a mac address to avoid FLOOD next time.
+        #pdb.set_trace()
         self.mac_to_port[dpid][src] = msg.in_port
 
         if dst in self.mac_to_port[dpid]:
             out_port = self.mac_to_port[dpid][dst]
         else:
-            out_port = ofproto.OFPP_FLOOD
+            if msg.in_port != 2:
+                print("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
+                print(dst)
+                pprint(eth)
+                out_port = ofproto.OFPP_FLOOD
+            else:
+                if dst == '70:B3:D5:6C:DF:2C':
+                    print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+                    print('Ta mamando')
+                out_port = 3
 
         actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
 
         # install a flow to avoid packet_in next time
         if out_port != ofproto.OFPP_FLOOD:
             self.add_flow(datapath, msg.in_port, dst, src, actions)
+			
 
         data = None
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:
@@ -108,3 +122,4 @@ class SimpleSwitch(app_manager.RyuApp):
             self.logger.info("port modified %s", port_no)
         else:
             self.logger.info("Illeagal port state %s %s", port_no, reason)
+
