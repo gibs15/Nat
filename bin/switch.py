@@ -26,7 +26,9 @@ from ryu.ofproto import ofproto_v1_0
 from ryu.lib.mac import haddr_to_bin
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
+from ryu.lib.packet import arp
 from ryu.lib.packet import ether_types
+from ryu.lib.packet import ipv4
 from pprint import pprint
 import pdb
 
@@ -60,7 +62,9 @@ class SimpleSwitch(app_manager.RyuApp):
         ofproto = datapath.ofproto
 
         pkt = packet.Packet(msg.data)
+        ip= pkt.get_protocol(ipv4.ipv4)
         eth = pkt.get_protocol(ethernet.ethernet)
+        p_arp = pkt.get_protocol(arp.arp)
 
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
@@ -74,7 +78,7 @@ class SimpleSwitch(app_manager.RyuApp):
         self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
 
         # learn a mac address to avoid FLOOD next time.
-        #pdb.set_trace()
+        #pdb.set_trace()	
         self.mac_to_port[dpid][src] = msg.in_port
 
         if dst in self.mac_to_port[dpid]:
@@ -82,14 +86,24 @@ class SimpleSwitch(app_manager.RyuApp):
         else:
             if msg.in_port != 2:
                 print("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
-                print(dst)
-                pprint(eth)
-                out_port = ofproto.OFPP_FLOOD
+                #if p_arp != None:
+                    #pkt.get_protocol(arp.arp).dst_mac = 'ff:ff:ff:ff:ff:ff'
+                pprint(pkt)
+                out_port = 2
             else:
-                if dst == '70:B3:D5:6C:DF:2C':
-                    print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-                    print('Ta mamando')
                 out_port = 3
+                #pprint(pkt)
+                #if p_arp != None:
+                    #print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+                    #pprint(p_arp)
+                    #print('\n' + p_arp.dst_ip + '\n')
+                    #if p_arp.dst_ip == '192.168.1.1':
+                        #print("FLOOOOOOOOOOOOOOOOOOOOOOOOOOD")
+                        #pprint(p_arp)
+                        #self.mac_to_port[dpid][p_arp.src_mac] = msg.in_port
+                        #out_port = 1
+                    #else:
+                        #out_port = 1
 
         actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
 
